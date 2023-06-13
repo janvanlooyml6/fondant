@@ -25,3 +25,6 @@ args:
   aesthetic_weight:
     description: Weight of the aesthetic embedding when added to the query, between 0 and 1
     type: float
+  max_threads:
+    description: Maximum amount of threads to use to retrieve images
+    type: int

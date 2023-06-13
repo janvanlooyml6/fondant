@@ -18,18 +18,19 @@ configure_logging()
 logger = logging.getLogger(__name__)
 
 
-def query_clip_client(embeddings: pd.Series, client: ClipClient) -> pd.DataFrame:
+def query_clip_client(embeddings: pd.Series, client: ClipClient, max_threads: int) -> pd.DataFrame:
     """
     Asynchronously retrieve image URLs and ids based on prompts in the provided dataframe.
     Args:
         embeddings: Series containing embedding
-        client (ClipClient): an instance of ClipClient used to query the images
+        client: an instance of ClipClient used to query the images
+        max_threads: maximum amount of threads to use for concurrent LAION querying
     Returns:
         urls: A dataframe with the image urls and the LAION ids as index
     """
 
     async def async_query():
-        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_threads) as executor:
             futures = [
                 loop.run_in_executor(
                     executor,
@@ -60,7 +61,8 @@ class LAIONRetrievalComponent(TransformComponent):
         *,
         num_images: int,
         aesthetic_score: int,
-        aesthetic_weight: float
+        aesthetic_weight: float,
+        max_threads: int,
     ) -> dd.DataFrame:
         """
         Args:
@@ -68,6 +70,7 @@ class LAIONRetrievalComponent(TransformComponent):
             num_images: number of images to retrieve for each prompt
             aesthetic_score: ranking score for aesthetic embedding, higher is prettier, between 0 and 9.
             aesthetic_weight: weight of the aesthetic embedding to add to the query, between 0 and 1.
+            max_threads: maximum amount of threads to use for concurrent LAION querying
         Returns:
             Dask dataframe
         """
@@ -86,13 +89,13 @@ class LAIONRetrievalComponent(TransformComponent):
         dataframe = dataframe["embeddings_data"].map_partitions(
             query_clip_client,
             client=client,
+            max_threads=max_threads,
             meta=meta_df
         )
 
         dataframe = dataframe.rename(columns={"url": "images_url"})
 
         return dataframe
-
 
 
 if __name__ == "__main__":
