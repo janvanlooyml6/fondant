@@ -3,63 +3,38 @@
 import json
 import logging
 
-import dask.dataframe as dd
+import pandas as pd
 from pii_detection import scan_pii
 from pii_redaction import redact_pii
 
-from fondant.component import TransformComponent
+from fondant.component import PandasTransformComponent
 from fondant.logger import configure_logging
 
 configure_logging()
 logger = logging.getLogger(__name__)
 
 
-class RemovePIIComponent(TransformComponent):
+class RemovePIIComponent(PandasTransformComponent):
     """Component that detects and redacts PII from code."""
 
-    def transform(
-        self,
-        *,
-        dataframe: dd.DataFrame,
-    ) -> dd.DataFrame:
-        """
-        Args:
-            dataframe: Dask dataframe.
+    def transform(self, dataframe: pd.DataFrame) -> pd.DataFrame:
+        dataframe["code"][["secrets", "has_secrets", "number_secrets"]] = \
+            dataframe["code"]["content"].apply(scan_pii)
 
-        Returns:
-            Dask dataframe
-        """
-        # detect PII
-        result = dataframe.apply(
-            lambda example: scan_pii(text=example.code_content),
-            axis=1,
-            result_type="expand",
-            meta={0: object, 1: bool, 2: int},
-        )
-        result.columns = ["code_secrets", "code_has_secrets", "code_number_secrets"]
-
-        dataframe = dataframe.merge(result, left_index=True, right_index=True)
-
-        # redact PII
-        # we use random replacements by default
         with open("replacements.json", "r") as f:
             replacements = json.load(f)
 
-        dataframe["code_content"] = dataframe.apply(
+        dataframe["code"]["content"] = dataframe["code"].apply(
             lambda example: redact_pii(
-                text=example.code_content,
-                secrets=example.code_secrets,
-                has_secrets=example.code_has_secrets,
+                text=example.content,
+                secrets=example.secrets,
+                has_secrets=example.has_secrets,
                 replacements=replacements,
-            ),
-            axis=1,
-            meta=(None, "str"),
+            )
         )
-        dataframe = dataframe.drop(
-            ["code_secrets", "code_has_secrets", "code_number_secrets"], axis=1
+        return dataframe["code"].drop(
+            ["secrets", "has_secrets", "number_secrets"], axis=1
         )
-
-        return dataframe
 
 
 if __name__ == "__main__":

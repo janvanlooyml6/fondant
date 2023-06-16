@@ -4,7 +4,7 @@ minimum and maximum values.
 """
 import logging
 
-import dask.dataframe as dd
+import pandas as pd
 from utils.text_extraction import get_comments_to_code_ratio
 
 from fondant.component import TransformComponent
@@ -17,29 +17,25 @@ logger = logging.getLogger(__name__)
 class FilterCommentsComponent(TransformComponent):
     """Component that filters instances based on code to comments ratio."""
 
-    def transform(
-        self,
-        *,
-        dataframe: dd.DataFrame,
-        min_comments_ratio: float,
-        max_comments_ratio: float
-    ) -> dd.DataFrame:
+    def setup(self, *, min_comments_ratio: float, max_comments_ratio: float) -> None:
         """
         Args:
-            dataframe: Dask dataframe
             min_comments_ratio: The minimum code to comment ratio
-            max_comments_ratio: The maximum code to comment ratio
-        Returns:
-            Filtered dask dataframe.
+            max_comments_ratio: The maximum code to comment ratio.
         """
-        # Apply the function to the desired column and filter the DataFrame
-        filtered_df = dataframe[
-            dataframe["code_content"].map_partitions(
-                lambda example: example.map(get_comments_to_code_ratio).between(
-                    min_comments_ratio, max_comments_ratio
-                )
-            )
-        ]
+        self.min_comments_ratio = min_comments_ratio
+        self.max_comments_ratio = max_comments_ratio
+
+    def transform(
+        self,
+        dataframe: pd.DataFrame,
+    ) -> pd.DataFrame:
+        mask = dataframe["code"]["content"].map(
+            get_comments_to_code_ratio,
+        ).between(
+            self.min_comments_ratio, self.max_comments_ratio
+        )
+        filtered_df = dataframe[mask]
 
         return filtered_df
 
