@@ -62,12 +62,17 @@ cluster_image_embeddings_op = ComponentOp(
         "num_clusters": 3,
     },
 )
+filter_text_spotting_op = ComponentOp.from_registry(
+    name="filter_text_spotting",
+    component_spec_path="components/filter_text_spotting/fondant_component.yaml",
+)
 
 # add ops to pipeline
 pipeline.add_op(load_from_hub_op)
 pipeline.add_op(filter_image_resolution_op, dependencies=load_from_hub_op)
 pipeline.add_op(filter_complexity_op, dependencies=filter_image_resolution_op)
 pipeline.add_op(cluster_image_embeddings_op, dependencies=filter_complexity_op)
+pipeline.add_op(filter_text_spotting_op, dependencies=cluster_image_embeddings_op)
 # TODO add more ops
 
 # compile

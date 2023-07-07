@@ -1,0 +1,9 @@
+name: Filter text spotting
+description: Component that filters image-text pairs based on a text spotting model
+image: ghcr.io/ml6team/filter_text_spotting:latest
+
+consumes:
+  image:
+    fields:
+      url:
+        type: string
