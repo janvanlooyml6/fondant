@@ -16,6 +16,7 @@ from easyocr.imgproc import resize_aspect_ratio, normalizeMeanVariance
 from easyocr.utils import reformat_input
 
 from fondant.component import PandasTransformComponent
+from fondant.executor import PandasTransformExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -47,13 +48,15 @@ def get_boxes(session, url):
     boxes, _, _ = getDetBoxes(score_text, score_link, 0.5, 0.4, 0.4)
     boxes = adjustResultCoordinates(boxes, ratio_w, ratio_h)
 
+    print("Boxes:", boxes)
+
     return boxes
 
 
 class FilterTextSpottingComponent(PandasTransformComponent):
     """Component that filters image-text pairs based on a text spotting model."""
 
-    def setup(self) -> None:
+    def __init__(self, *args) -> None:
         onnx_file = hf_hub_download(
             repo_id="ml6team/craft-onnx", filename="craft.onnx", repo_type="model"
         )
@@ -79,5 +82,5 @@ class FilterTextSpottingComponent(PandasTransformComponent):
 
 
 if __name__ == "__main__":
-    component = FilterTextSpottingComponent.from_args()
-    component.run()
+    executor = PandasTransformExecutor.from_args()
+    executor.execute(FilterTextSpottingComponent)
