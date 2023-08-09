@@ -152,6 +152,8 @@ class DownloadImagesComponent(DaskTransformComponent):
         # Remove images that could not be fetched
         dataframe = dataframe.dropna()
 
+        logger.warning(dataframe.head())
+
         return dataframe
 
 

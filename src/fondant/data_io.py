@@ -2,13 +2,18 @@ import logging
 import os
 import typing as t
 
+import dask
 import dask.dataframe as dd
+import pandas as pd
 from dask.diagnostics import ProgressBar
 
 from fondant.component_spec import ComponentSpec, ComponentSubset
 from fondant.manifest import Manifest
 
 logger = logging.getLogger(__name__)
+
+
+dask.config.set({"dataframe.convert-string": False})
 
 
 class DataIO:
@@ -74,7 +79,7 @@ class DaskDataLoader(DataIO):
 
         return dataframe
 
-    def _load_subset(self, subset_name: str, fields: t.List[str]) -> dd.DataFrame:
+    def _load_subset(self, subset_name: str, fields: t.Dict[str, str]) -> dd.DataFrame:
         """
         Function that loads a subset from the manifest as a Dask dataframe.
 
@@ -90,7 +95,9 @@ class DaskDataLoader(DataIO):
 
         logger.info(f"Loading subset {subset_name} with fields {fields}...")
 
-        subset_df = dd.read_parquet(remote_path, columns=fields)
+        subset_df = dd.read_parquet(remote_path, columns=list(fields.keys())) # .astype(fields)
+
+        logger.warning(subset_df.head())
 
         # add subset prefix to columns
         subset_df = subset_df.rename(
@@ -126,7 +133,8 @@ class DaskDataLoader(DataIO):
         # load index into dataframe
         dataframe = self._load_index()
         for name, subset in self.component_spec.consumes.items():
-            fields = list(subset.fields.keys())
+            fields = {field.name: pd.ArrowDtype(field.type.value) for field in
+                                                subset.fields.values()}
             subset_df = self._load_subset(name, fields)
             # left joins -> filter on index
             dataframe = dd.merge(
@@ -292,6 +300,7 @@ class DaskDataWriter(DataIO):
             schema=schema,
             overwrite=False,
             compute=False,
+            write_metadata_file=True,
         )
         logging.info(f"Creating write task for: {location}")
         return write_task

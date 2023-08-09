@@ -82,7 +82,9 @@ class CaptionImagesComponent(PandasTransformComponent):
                     ).T,
                 )
 
-        return pd.concat(results).to_frame(name=("captions", "text"))
+        dataframe = pd.concat(results).to_frame(name=("captions", "text"))
+        logger.warning(dataframe.head())
+        return dataframe
 
 
 if __name__ == "__main__":
