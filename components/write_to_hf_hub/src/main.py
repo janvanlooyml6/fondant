@@ -66,10 +66,7 @@ class WriteToHubComponent(DaskWriteComponent):
         self.image_column_names = image_column_names
         self.column_name_mapping = column_name_mapping
 
-    def write(
-        self,
-        dataframe: dd.DataFrame,
-    ):
+    def write(self, dataframe: dd.DataFrame):
         # Get columns to write and schema
         write_columns = []
         schema_dict = {}
