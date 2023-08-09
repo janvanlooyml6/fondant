@@ -2,7 +2,6 @@ import logging
 import os
 import typing as t
 
-import dask
 import dask.dataframe as dd
 from dask.diagnostics import ProgressBar
 
@@ -10,8 +9,6 @@ from fondant.component_spec import ComponentSpec, ComponentSubset
 from fondant.manifest import Manifest
 
 logger = logging.getLogger(__name__)
-
-dask.config.set({"dataframe.convert-string": False})
 
 
 class DataIO:

@@ -11,5 +11,5 @@ class PipelineConfigs:
         HOST (str): the kfp host url
     """
 
-    BASE_PATH = "gs://soy-audio-379412_kfp-artifacts/custom_artifact"
+    BASE_PATH = "/home/robbe/workspace/fondant/examples/pipelines/controlnet-interior-design/artifacts"
     HOST = "https://52074149b1563463-dot-europe-west1.pipelines.googleusercontent.com/"
