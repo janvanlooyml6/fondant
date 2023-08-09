@@ -58,11 +58,21 @@ filter_complexity_op = ComponentOp(
     node_pool_name="n2-standard-128-pool",
     output_partition_size="disable",
 )
+write_to_hub_op = ComponentOp(
+    component_dir="components/write_to_hf_hub",
+    arguments={
+        "username": "nielsr",
+        "dataset_name": "datacomp_small_filtered",
+        "hf_token": "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",
+    },
+)
+
 
 # add ops to pipeline
 pipeline.add_op(load_from_hub_op)
 pipeline.add_op(filter_image_resolution_op, dependencies=load_from_hub_op)
 pipeline.add_op(filter_complexity_op, dependencies=filter_image_resolution_op)
+pipeline.add_op(write_to_hub_op, dependencies=filter_complexity_op)
 # TODO add more ops
 
 
