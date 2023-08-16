@@ -75,6 +75,6 @@ def load_dataframe(manifest_path: str,
     manifest = load_manifest(manifest_path)
 
     subset = manifest.subsets[subset_name]
-    subset_path = subset.location
-
+    base_path = manifest.base_path
+    subset_path = f"{base_path}/{subset.location}"
     return dd.read_parquet(subset_path, columns=fields)
