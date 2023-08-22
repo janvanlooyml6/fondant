@@ -66,8 +66,8 @@ filter_complexity_op = ComponentOp(
 
 # add ops to pipeline
 pipeline.add_op(load_from_hub_op)
-pipeline.add_op(filter_complexity_op, dependencies=download_images_op)
-pipeline.add_op(download_images_op, dependencies=load_from_hub_op)
+# pipeline.add_op(filter_complexity_op, dependencies=download_images_op)
+# pipeline.add_op(download_images_op, dependencies=load_from_hub_op)
 # TODO add more ops
 
 
