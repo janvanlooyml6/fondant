@@ -283,9 +283,7 @@ class KubeflowComponentSpec:
             "implementation": {
                 "container": {
                     "image": fondant_component.image,
-                    "command": [
-                        "python3",
-                        "main.py",
+                    "args": [
                         "--input_manifest_path",
                         {"inputPath": "input_manifest_path"},
                         "--metadata",
