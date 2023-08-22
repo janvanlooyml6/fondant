@@ -365,10 +365,11 @@ def register_execute(parent_parser):
 
 
 def execute(args):
-    component = component_from_module(args.ref)
-    executor_factory = ExecutorFactory(component)
-    executor = executor_factory.get_executor()
-    executor.execute(component)
+    if __name__ == "__main__":
+        component = component_from_module(args.ref)
+        executor_factory = ExecutorFactory(component)
+        executor = executor_factory.get_executor()
+        executor.execute(component)
 
 
 class ImportFromStringError(Exception):

@@ -8,9 +8,9 @@ import yaml
 from fondant.compiler import DockerCompiler, KubeFlowCompiler
 from fondant.pipeline import ComponentOp, Pipeline
 
-COMPONENTS_PATH = Path("example_pipelines/valid_pipeline")
+COMPONENTS_PATH = Path("./tests/example_pipelines/valid_pipeline")
 
-VALID_PIPELINE = Path("example_pipelines/compiled_pipeline/")
+VALID_PIPELINE = Path("./tests/example_pipelines/compiled_pipeline/")
 
 TEST_PIPELINES = [
     (

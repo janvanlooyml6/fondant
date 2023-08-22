@@ -4,7 +4,6 @@ import typing as t
 
 import dask.dataframe as dd
 import pandas as pd
-from fondant.cli import ExecutorFactory
 from fondant.component import DaskLoadComponent
 
 logger = logging.getLogger(__name__)
@@ -13,11 +12,11 @@ logger = logging.getLogger(__name__)
 class LoadFromHubComponent(DaskLoadComponent):
 
     def __init__(self, *_,
-             dataset_name: str,
-             column_name_mapping: dict,
-             image_column_names: t.Optional[list],
-             n_rows_to_load: t.Optional[int],
-             index_column:t.Optional[str],
+                 dataset_name: str,
+                 column_name_mapping: dict,
+                 image_column_names: t.Optional[list],
+                 n_rows_to_load: t.Optional[int],
+                 index_column: t.Optional[str],
                  ) -> None:
         """
         Args:
@@ -74,9 +73,9 @@ class LoadFromHubComponent(DaskLoadComponent):
                 """Function that sets a unique index based on the partition and row number."""
                 dataframe["id"] = 1
                 dataframe["id"] = (
-                    str(partition_info["number"])
-                    + "_"
-                    + (dataframe.id.cumsum()).astype(str)
+                        str(partition_info["number"])
+                        + "_"
+                        + (dataframe.id.cumsum()).astype(str)
                 )
                 dataframe.index = dataframe.pop("id")
                 return dataframe
@@ -87,9 +86,3 @@ class LoadFromHubComponent(DaskLoadComponent):
             dask_df = dask_df.set_index(self.index_column, drop=True)
 
         return dask_df
-
-
-if __name__ == "__main__":
-    executor_factory = ExecutorFactory(LoadFromHubComponent)
-    executor = executor_factory.get_executor()
-    executor.execute(LoadFromHubComponent)
