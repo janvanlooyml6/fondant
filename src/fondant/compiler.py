@@ -175,6 +175,22 @@ class DockerCompiler(Compiler):
                 "depends_on": depends_on,
                 "volumes": volumes,
             }
+            if component_op.number_of_gpus is not None:
+                services[component_name]["deploy"] = {
+                    "resources": {
+                        "reservations": [
+                            {
+                                "devices": [
+                                    {
+                                        "driver": "nvidia",
+                                        "count": component_op.number_of_gpus,
+                                        "capabilities": ["gpu"],
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                }
 
             if component_op.dockerfile_path is not None:
                 logger.info(

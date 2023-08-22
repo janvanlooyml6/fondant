@@ -8,9 +8,9 @@ import yaml
 from fondant.compiler import DockerCompiler, KubeFlowCompiler
 from fondant.pipeline import ComponentOp, Pipeline
 
-COMPONENTS_PATH = Path("./tests/example_pipelines/valid_pipeline")
+COMPONENTS_PATH = Path("example_pipelines/valid_pipeline")
 
-VALID_PIPELINE = Path("./tests/example_pipelines/compiled_pipeline/")
+VALID_PIPELINE = Path("example_pipelines/compiled_pipeline/")
 
 TEST_PIPELINES = [
     (
@@ -20,6 +20,7 @@ TEST_PIPELINES = [
                 Path(COMPONENTS_PATH / "example_1" / "first_component"),
                 arguments={"storage_args": "a dummy string arg"},
                 input_partition_rows="disable",
+                number_of_gpus=1,
             ),
             ComponentOp(
                 Path(COMPONENTS_PATH / "example_1" / "second_component"),
@@ -95,6 +96,8 @@ def test_docker_compiler(setup_pipeline, tmp_path_factory):
         with open(output_path) as src, open(
             VALID_PIPELINE / example_dir / "docker-compose.yml",
         ) as truth:
+            with open(f"{example_dir}.yml", "w") as outfile:
+                yaml.dump(yaml.safe_load(src), outfile, default_flow_style=False)
             assert yaml.safe_load(src) == yaml.safe_load(truth)
 
 

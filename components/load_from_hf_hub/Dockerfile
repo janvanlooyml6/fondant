@@ -20,4 +20,4 @@ WORKDIR /component/src
 # Copy over src-files
 COPY src/ .
 
-ENTRYPOINT ["fondant", "execute", "main"]
+ENTRYPOINT ["python", "main"]
