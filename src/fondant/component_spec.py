@@ -284,7 +284,8 @@ class KubeflowComponentSpec:
                 "container": {
                     "image": fondant_component.image,
                     "command": [
-                        "python3",
+                        "fondant",
+                        "execute",
                         "main.py",
                         "--input_manifest_path",
                         {"inputPath": "input_manifest_path"},
