@@ -8,6 +8,8 @@ from fondant.component import DaskLoadComponent
 from trafilatura.settings import use_config
 from utils import (
     extract_bytes_from_warc_file_http,
+    extract_html,
+    set_unique_index,
     validate_commoncrawl_index_filters,
 )
 
@@ -21,12 +23,15 @@ class CommonCrawlDownloadComponent(DaskLoadComponent):
 
     def __init__(self,
                  *_,
+                 crawl_name: str,
                  filters: List,
                  extract_plain_text: bool,
                  n_records_to_download: Optional[int] = None):
         # init global trafilatura config for multi-processing
         self.trafilatura_config = use_config()
         self.trafilatura_config.set("DEFAULT", "EXTRACTION_TIMEOUT", "0")
+
+        self.crawl_name = crawl_name
         self.filters = validate_commoncrawl_index_filters(filters)
         self.extract_plain_text = extract_plain_text
         self.n_records_to_download = n_records_to_download
@@ -38,7 +43,6 @@ class CommonCrawlDownloadComponent(DaskLoadComponent):
         """
         logger.info("Filtering common crawl index...")
         output_columns = [
-            "url_surtkey",
             "url",
             "warc_filename",
             "warc_record_offset",
@@ -46,7 +50,9 @@ class CommonCrawlDownloadComponent(DaskLoadComponent):
         ]
 
         cc_index = ds.dataset(CC_INDEX_PATH, format="parquet", partitioning="hive")
-        warc_files = cc_index.files
+
+        crawl_subset = f"crawl={self.crawl_name}/subset=warc/"
+        warc_files = [f for f in cc_index.files if crawl_subset in f]
         warc_files = [CC_BASE_URL + file for file in warc_files] # TODO: change to http
         warc_ddf = dd.read_parquet(
             warc_files,
@@ -55,8 +61,21 @@ class CommonCrawlDownloadComponent(DaskLoadComponent):
             columns=output_columns,
         )
 
+        # optional: limit number of records to download
         if self.n_records_to_download is not None:
-            warc_ddf = warc_ddf.head(self.n_records_to_download)
+            partitions_length = 0
+            npartitions = 1
+            for npartitions, partition in enumerate(warc_ddf.partitions, 1):
+                if partitions_length >= self.n_records_to_download:
+                    logger.info(f"""Required number of partitions to load\n
+                    {self.n_records_to_download} is {npartitions}""")
+                    break
+                partitions_length += len(partition)
+                warc_ddf = warc_ddf.head(self.n_records_to_download, npartitions=npartitions)
+                warc_ddf = dd.from_pandas(warc_ddf, npartitions=npartitions)
+
+        # set index
+        warc_ddf = warc_ddf.map_partitions(set_unique_index, meta=warc_ddf.head())
 
         return warc_ddf
 
@@ -69,6 +88,7 @@ class CommonCrawlDownloadComponent(DaskLoadComponent):
                                                             row["warc_record_offset"],
                                                             row["warc_record_length"]),
             axis=1,
+            meta=("content", "str"),
             ),
         )
 
@@ -81,14 +101,15 @@ class CommonCrawlDownloadComponent(DaskLoadComponent):
             Pandas dataframe
         """
         ddf = self.filter_common_crawl_index()
-
         ddf = self.download_warc_content(ddf)
 
-        # if self.extract_plain_text:
-        #     ddf["url"] = ddf["url"].apply(
-        #         lambda x: extract_html(x, self.trafilatura_config), meta=("url", "str"))
-
         ddf = ddf.dropna(subset=["content"])
+        if self.extract_plain_text:
+            ddf["content"] = ddf["content"].apply(
+                lambda x: extract_html(x, self.trafilatura_config),
+                meta=("url", "str"),
+            )
+
         result_ddf = ddf[['url', 'content']]
 
         result_ddf.columns = [

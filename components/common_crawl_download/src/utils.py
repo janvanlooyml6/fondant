@@ -4,6 +4,7 @@ from io import BytesIO
 from typing import List
 
 import httpx
+import pandas as pd
 import trafilatura
 from configs import VALID_COMMONCRAWL_INDEX_FILTERS, VALID_OPERATORS
 from warcio.archiveiterator import ArchiveIterator
@@ -18,14 +19,18 @@ def extract_bytes_from_warc_file_http(warc_filename: str,
     url = f"{prefix}{warc_filename}"
     headers = {"Range": f"bytes={warc_record_offset}-{warc_record_offset + warc_record_length - 1}"}
 
-    with httpx.Client() as client:
-        response = client.get(url, headers=headers)
+    try:
+        with httpx.Client() as client:
+            response = client.get(url, headers=headers)
 
-    with BytesIO(response.content) as warc_stream:
-        for record in ArchiveIterator(warc_stream):
-            if "response" in record.content_type:
-                return record.content_stream().read()
-    return None
+        with BytesIO(response.content) as warc_stream:
+            for record in ArchiveIterator(warc_stream):
+                if "response" in record.content_type:
+                    return record.content_stream().read()
+
+    except Exception:
+        logger.error(f"Error downloading WARC file: {url}")
+        return None
 
 
 def extract_html(content: str, trafilatura_config: ConfigParser) -> str:
@@ -66,3 +71,14 @@ def validate_commoncrawl_index_filters(filters: List) -> List:
         return filters
     except Exception as e:
         raise e
+
+def set_unique_index(dataframe: pd.DataFrame, partition_info=None):
+    """Function that sets a unique index based on the partition and row number."""
+    dataframe["id"] = 1
+    dataframe["id"] = (
+        str(partition_info["number"])
+        + "_"
+        + (dataframe.id.cumsum()).astype(str)
+    )
+    dataframe.index = dataframe.pop("id")
+    return dataframe
