@@ -8,7 +8,6 @@ from fondant.component import DaskLoadComponent
 from trafilatura.settings import use_config
 from utils import (
     extract_bytes_from_warc_file_http,
-    extract_html,
     validate_commoncrawl_index_filters,
 )
 
@@ -85,9 +84,9 @@ class CommonCrawlDownloadComponent(DaskLoadComponent):
 
         ddf = self.download_warc_content(ddf)
 
-        if self.extract_plain_text:
-            ddf["url_content"] = ddf["url_content"].apply(
-                lambda x: extract_html(x, self.trafilatura_config), meta=("url_content", "str"))
+        # if self.extract_plain_text:
+        #     ddf["url"] = ddf["url"].apply(
+        #         lambda x: extract_html(x, self.trafilatura_config), meta=("url", "str"))
 
         ddf = ddf.dropna(subset=["content"])
         result_ddf = ddf[['url', 'content']]
