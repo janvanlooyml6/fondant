@@ -1,16 +1,13 @@
 """A component that downloads common crawl files."""
-import asyncio
 import io
 import logging
 import os
 import typing as t
 
-import dask
 import dask.dataframe as dd
-import httpx
 import pandas as pd
+import requests
 from fondant.component import DaskLoadComponent
-from fsspec.implementations.http import HTTPFileSystem
 from utils import (
     extract_html,
     parse_commoncrawl_index_filters,
@@ -18,8 +15,6 @@ from utils import (
 )
 
 logger = logging.getLogger(__name__)
-
-dask.config.set(scheduler="processes")
 
 CC_BASE_URL = "http://data.commoncrawl.org"
 
@@ -38,7 +33,7 @@ class CommonCrawlDownloadComponent(DaskLoadComponent):
         self.filters = parse_commoncrawl_index_filters(filters) if filters else None
         self.extract_plain_text = extract_plain_text
         self.n_records_to_download = n_records_to_download
-        self.index_files = [self.get_http_url_path(url) for url in common_crawl_indices]
+        self.index_files = common_crawl_indices
 
     def load_index(self) -> dd.DataFrame:
         """
@@ -57,22 +52,17 @@ class CommonCrawlDownloadComponent(DaskLoadComponent):
             "warc_record_length",
         ]
 
-        https_filesytem = HTTPFileSystem()
-
         dataframe = dd.read_parquet(
             self.index_files,
             filters=self.filters,
             columns=output_columns,
-            filesystem=https_filesytem,
         )
 
         return dataframe.set_index("url_surtkey", sorted=True, drop=True)
 
-    async def download_warc_content(
+    def download_warc_content(
         self,
         row: t.Any,
-        client: httpx.AsyncClient,
-        semaphore: asyncio.Semaphore,
     ) -> t.Tuple[str, str, t.Optional[str]]:
         """
         Download content of a single web page.
@@ -80,8 +70,6 @@ class CommonCrawlDownloadComponent(DaskLoadComponent):
         Args:
             row: This should be a NamedTuple returned by df.itertuples(), but cannot be
                  typehinted as such.
-            client: Httpx client to use
-            semaphore: Semaphore to limit amount of concurrent requests
 
         Returns:
             A tuple containing the index, url, and extracted content
@@ -93,8 +81,7 @@ class CommonCrawlDownloadComponent(DaskLoadComponent):
         }
 
         try:
-            async with semaphore:
-                response = await client.get(url, headers=headers)
+            response = requests.get(url, headers=headers)
         except Exception as e:
             logger.warning(f"Error downloading {url} with headers {headers}: {repr(e)}")
             return row.Index, url, None
@@ -109,20 +96,7 @@ class CommonCrawlDownloadComponent(DaskLoadComponent):
 
     def download_and_extract(self, dataframe: pd.DataFrame) -> pd.DataFrame:
         """Concurrently download and extract the WARC files referenced in the provided dataframe."""
-        html_content = []
-
-        async def download_dataframe() -> None:
-            semaphore = asyncio.Semaphore(20)
-
-            transport = httpx.AsyncHTTPTransport(retries=1)
-            async with httpx.AsyncClient(transport=transport, timeout=10) as client:
-                html = await asyncio.gather(
-                    *[self.download_warc_content(row, client=client, semaphore=semaphore)
-                      for row in dataframe.itertuples()],
-                )
-                html_content.extend(html)
-
-        asyncio.run(download_dataframe())
+        html_content = [self.download_warc_content(row) for row in dataframe.itertuples()]
 
         columns = ["url_surtkey", "url", "content"]
         if html_content:
@@ -165,11 +139,3 @@ class CommonCrawlDownloadComponent(DaskLoadComponent):
         ]
 
         return content_ddf
-
-    @staticmethod
-    def get_http_url_path(url):
-        """Construct http path to common crawl index file."""
-        if CC_BASE_URL in url:
-            return url
-
-        return f"{CC_BASE_URL}/{url}"
