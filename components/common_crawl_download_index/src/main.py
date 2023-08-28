@@ -55,7 +55,7 @@ class CommonCrawlDownloadComponent(DaskLoadComponent):
             "webpage_length",
         ]
 
-        dataframe = dataframe.repartition(npartitions=1000)
+        dataframe = dataframe.repartition(npartitions=1000 * len(self.index_files))
 
         return dataframe
 

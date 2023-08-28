@@ -48,10 +48,9 @@ class CommonCrawlDownloadComponent(PandasTransformComponent):
         Returns:
             A tuple containing the index, url, and extracted content
         """
-        url = f"{CC_BASE_URL}/{row.warc_filename}"
+        url = f"{CC_BASE_URL}/{row.filename}"
         headers = {
-            "Range": f"bytes={row.warc_record_offset}-"
-                     f"{row.warc_record_offset + row.warc_record_length - 1}",
+            "Range": f"bytes={row.offset}-{row.offset + row.length - 1}",
         }
 
         try:

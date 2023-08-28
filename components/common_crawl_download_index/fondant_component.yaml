@@ -1,6 +1,6 @@
 name: Common crawl download index component
 description: A component that downloads parts of the common crawl
-image: ghcr.io/ml6team/common_crawl_download_index:5490f15
+image: ghcr.io/ml6team/common_crawl_download_index:556dbb4
 
 produces:
   webpage:
@@ -10,7 +10,7 @@ produces:
       filename:
         type: string
       offset:
-        type: string
+        type: int32
       length:
         type: int32
 

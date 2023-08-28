@@ -10,7 +10,7 @@ consumes:
       filename:
         type: string
       offset:
-        type: string
+        type: int32
       length:
         type: int32
 
