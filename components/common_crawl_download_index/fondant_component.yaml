@@ -1,0 +1,24 @@
+name: Common crawl download index component
+description: A component that downloads parts of the common crawl
+image: ghcr.io/ml6team/common_crawl_download_index:17dc292
+
+produces:
+  webpage:
+    fields:
+      url:
+        type: string
+      filename:
+        type: string
+      offset:
+        type: string
+      length:
+        type: int32
+
+args:
+  common_crawl_indices:
+    description: List of common crawl indices which will be used to filter webpages
+    type: list
+  filters:
+    description: PyArrow filter which selects the pages to download
+    type: list
+    default: None

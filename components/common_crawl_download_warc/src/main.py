@@ -2,17 +2,14 @@
 import asyncio
 import io
 import logging
-import os
 import typing as t
 
 import dask
-import dask.dataframe as dd
 import httpx
 import pandas as pd
-from fondant.component import DaskLoadComponent
+from fondant.component import PandasTransformComponent
 from utils import (
     extract_html,
-    parse_commoncrawl_index_filters,
     read_warc_content,
 )
 
@@ -23,46 +20,17 @@ dask.config.set(scheduler="processes")
 CC_BASE_URL = "http://data.commoncrawl.org"
 
 
-class CommonCrawlDownloadComponent(DaskLoadComponent):
+class CommonCrawlDownloadComponent(PandasTransformComponent):
     """Component that download common crawl files."""
 
     def __init__(
         self,
         *_,
-        common_crawl_indices: t.List[str],
-        filters: t.List[dict],
         extract_plain_text: bool,
         n_records_to_download: t.Optional[int] = None,
     ):
-        self.filters = parse_commoncrawl_index_filters(filters) if filters else None
         self.extract_plain_text = extract_plain_text
         self.n_records_to_download = n_records_to_download
-        self.index_files = common_crawl_indices
-
-    def load_index(self) -> dd.DataFrame:
-        """
-        Load the common crawl index with the provided filters.
-
-        Returns:
-            A dataframe containing the filtered urls and their location in the WARC archivei
-        """
-        logger.info("Loading filtered common crawl index...")
-
-        output_columns = [
-            "url_surtkey",
-            "url",
-            "warc_filename",
-            "warc_record_offset",
-            "warc_record_length",
-        ]
-
-        dataframe = dd.read_parquet(
-            self.index_files,
-            filters=self.filters,
-            columns=output_columns,
-        )
-
-        return dataframe.set_index("url_surtkey", sorted=True, drop=True)
 
     async def download_warc_content(
         self,
@@ -100,7 +68,7 @@ class CommonCrawlDownloadComponent(DaskLoadComponent):
 
             return row.Index, row.url, content
 
-    def download_and_extract(self, dataframe: pd.DataFrame) -> pd.DataFrame:
+    def transform(self, dataframe: pd.DataFrame) -> pd.DataFrame:
         """Concurrently download and extract the WARC files referenced in the provided dataframe."""
         html_content = []
 
@@ -109,7 +77,7 @@ class CommonCrawlDownloadComponent(DaskLoadComponent):
             async with httpx.AsyncClient(transport=transport, timeout=10) as client:
                 html = await asyncio.gather(
                     *[self.download_warc_content(row, client=client)
-                      for row in dataframe.itertuples()],
+                      for row in dataframe["webpage"].itertuples()],
                 )
                 html_content.extend(html)
 
@@ -124,35 +92,9 @@ class CommonCrawlDownloadComponent(DaskLoadComponent):
         content_df = content_df.dropna()
         content_df = content_df.set_index("url_surtkey", drop=True)
 
-        return content_df
-
-    def load(self) -> dd.DataFrame:
-        index_ddf = self.load_index()
-
-        # Repartition to parallelize and reduce memory footprint of each partition.
-        # Each (unfiltered) index file contains around ~10M urls. The numbers below are chosen so
-        # they end up with around 10k urls per partition. With an estimated content of ~25KB per
-        # page, this brings us close to the recommended partition size of 250MB.
-        if self.n_records_to_download is not None:
-            n_partitions = max(os.cpu_count(), self.n_records_to_download // 10000)  # type: ignore
-            logging.info(f"Repartitioning to {n_partitions} partitions.")
-            index_ddf = dd.from_pandas(index_ddf.head(self.n_records_to_download,
-                                                      npartitions=-1), npartitions=n_partitions)
-        else:
-            n_partitions = len(self.index_files) * 1000
-            logging.info(f"Repartitioning to {n_partitions} partitions.")
-            index_ddf = index_ddf.repartition(npartitions=n_partitions)
-
-        meta = pd.DataFrame(columns=["url", "content"])
-
-        content_ddf = index_ddf.map_partitions(
-            self.download_and_extract,
-            meta=meta,
-        )
-
-        content_ddf.columns = [
-            "webpage_url",
-            "webpage_content",
+        content_df.columns = [
+            ("webpage", "url"),
+            ("webpage", "content"),
         ]
 
-        return content_ddf
+        return content_df

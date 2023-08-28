@@ -1,0 +1,33 @@
+name: Common crawl download warc component
+description: A component that downloads parts of the common crawl
+image: ghcr.io/ml6team/common_crawl_download_warc:17dc292
+
+consumes:
+  webpage:
+    fields:
+      url:
+        type: string
+      filename:
+        type: string
+      offset:
+        type: string
+      length:
+        type: int32
+
+produces:
+  webpage:
+    fields:
+      url:
+        type: string
+      content:
+        type: string
+
+args:
+  extract_plain_text:
+    description: If set to true the data contains the plain text without html tags
+    type: bool
+    default: "False"
+  n_records_to_download:
+    description: Number of records to download
+    type: int
+    default: None
