@@ -6,7 +6,6 @@ import dask
 import dask.dataframe as dd
 from configs import VALID_COMMONCRAWL_INDEX_FILTERS, VALID_OPERATORS
 from fondant.component import DaskLoadComponent
-from fsspec.implementations.http import HTTPFileSystem
 
 logger = logging.getLogger(__name__)
 
@@ -42,13 +41,10 @@ class CommonCrawlDownloadComponent(DaskLoadComponent):
             "warc_record_length",
         ]
 
-        https_filesytem = HTTPFileSystem()
-
         dataframe = dd.read_parquet(
             self.index_files,
             filters=self.filters,
             columns=output_columns,
-            filesystem=https_filesytem,
         )
 
         dataframe = dataframe.set_index("url_surtkey", sorted=True, drop=True)
