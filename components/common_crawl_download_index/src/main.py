@@ -12,8 +12,6 @@ logger = logging.getLogger(__name__)
 
 dask.config.set(scheduler="processes")
 
-CC_BASE_URL = "http://data.commoncrawl.org"
-
 
 class CommonCrawlDownloadComponent(DaskLoadComponent):
     """Component that download common crawl files."""
@@ -25,7 +23,7 @@ class CommonCrawlDownloadComponent(DaskLoadComponent):
         filters: t.List[dict],
     ):
         self.filters = parse_commoncrawl_index_filters(filters) if filters else None
-        self.index_files = [self.get_http_url_path(url) for url in common_crawl_indices]
+        self.index_files = common_crawl_indices
 
     def load(self) -> dd.DataFrame:
         """
@@ -64,14 +62,6 @@ class CommonCrawlDownloadComponent(DaskLoadComponent):
         dataframe = dataframe.repartition(npartitions=1000)
 
         return dataframe
-
-    @staticmethod
-    def get_http_url_path(url):
-        """Construct http path to common crawl index file."""
-        if CC_BASE_URL in url:
-            return url
-
-        return f"{CC_BASE_URL}/{url}"
 
 
 def parse_commoncrawl_index_filters(filters: t.List) -> t.List:
