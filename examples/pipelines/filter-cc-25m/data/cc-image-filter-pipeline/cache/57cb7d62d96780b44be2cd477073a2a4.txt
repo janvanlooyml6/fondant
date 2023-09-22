@@ -1,0 +1,1 @@
+/data/cc-image-filter-pipeline/cc-image-filter-pipeline-20230921102706/download_images/manifest.json

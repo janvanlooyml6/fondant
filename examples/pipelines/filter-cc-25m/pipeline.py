@@ -42,7 +42,6 @@ load_from_hf_hub = ComponentOp(
         "column_name_mapping": load_component_column_mapping,
         "n_rows_to_load": 100,
     },
-    cache=False,
 )
 
 # Filter mime type component
